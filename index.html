@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACT - Uji Kerentanan Clickjacking</title>
+    
+    <!-- Security Headers -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; frame-src *; object-src 'none';">
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-Frame-Options" content="SAMEORIGIN">
+    
+    <!-- ==================== META OPEN GRAPH (OG) - CLICKJACKING TEST TOOL ==================== -->
+    
+    <!-- Primary Meta Tags -->
+    <title>Clickjacking Test Tool - Uji Kerentanan Website dengan Mudah</title>
+    <meta name="title" content="ACT - Uji Kerentanan Clickjacking">
+    <meta name="description" content="Tools gratis untuk menguji kerentanan clickjacking pada website. Masukkan URL, cek header keamanan X-Frame-Options & CSP, lihat contoh serangan dan mitigasi.">
+    <meta name="keywords" content="clickjacking, test tool, security, X-Frame-Options, CSP, keamanan website, ui redressing, bug bounty">
+    <meta name="author" content="andwisakti">
+    <meta name="robots" content="index, follow">
+    
+    <!-- Open Graph / Facebook / WhatsApp / Telegram -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://act.vercel.app">
+    <meta property="og:title" content="ACT - Uji Kerentanan Clickjacking">
+    <meta property="og:description" content="🔍 Tools gratis untuk menguji kerentanan clickjacking. Cek apakah website Anda bisa dimuat dalam iframe dan rentan terhadap serangan UI redressing.">
+    <meta property="og:image" content="https://act.vercel.app/logo.png">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="1200">
+    <meta property="og:image:alt" content="Clickjacking Test Tool Preview">
+    <meta property="og:site_name" content="Clickjacking Test by andwisakti">
+    <meta property="og:locale" content="id_ID">
+    
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+        
+        /* Header */
+        .header {
+            background: #1e3c72;
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+            border-bottom: 4px solid #ffd700;
+        }
+        
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .header h1::before {
+            content: "🔍";
+            font-size: 2rem;
+        }
+        
+        .badge {
+            background: #ffd700;
+            color: #1e3c72;
+            padding: 8px 20px;
+            border-radius: 40px;
+            font-weight: 700;
+            font-size: 1rem;
+            letter-spacing: 0.5px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        
+        /* Input Section */
+        .input-section {
+            background: #f8f9fa;
+            padding: 25px 30px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .input-group label {
+            font-weight: 600;
+            color: #1e3c72;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .input-flex {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .input-flex input {
+            flex: 1;
+            min-width: 300px;
+            padding: 15px 20px;
+            border: 2px solid #dee2e6;
+            border-radius: 12px;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+            font-family: monospace;
+        }
+        
+        .input-flex input:focus {
+            outline: none;
+            border-color: #1e3c72;
+            box-shadow: 0 0 0 4px rgba(30, 60, 114, 0.1);
+        }
+        
+        .input-flex input.error {
+            border-color: #dc3545;
+            animation: shake 0.5s ease;
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-5px); }
+            40%, 80% { transform: translateX(5px); }
+        }
+        
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            justify-content: center;
+        }
+        
+        .btn-primary {
+            background: #1e3c72;
+            color: white;
+            box-shadow: 0 4px 12px rgba(30, 60, 114, 0.3);
+        }
+        
+        .btn-primary:hover {
+            background: #0f2a4a;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(30, 60, 114, 0.4);
+        }
+        
+        .btn-outline {
+            background: transparent;
+            border: 2px solid #1e3c72;
+            color: #1e3c72;
+        }
+        
+        .btn-outline:hover {
+            background: #1e3c72;
+            color: white;
+        }
+        
+        /* URL Examples */
+        .url-examples {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px dashed #dee2e6;
+        }
+        
+        .url-example {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 30px;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #495057;
+        }
+        
+        .url-example:hover {
+            background: #1e3c72;
+            color: white;
+            border-color: #1e3c72;
+            transform: translateY(-2px);
+        }
+        
+        /* Info Bar */
+        .info-bar {
+            background: #e9ecef;
+            padding: 12px 30px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            font-size: 0.9rem;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .info-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .info-item.warning {
+            color: #856404;
+            background: #fff3cd;
+            padding: 4px 12px;
+            border-radius: 30px;
+        }
+        
+        /* Iframe Container - KOSONG AWALNYA */
+        .iframe-container {
+            width: 100%;
+            height: 60vh;
+            min-height: 500px;
+            background: #ffffff;
+            position: relative;
+            border-bottom: 3px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: white;
+        }
+        
+        .empty-state {
+            text-align: center;
+            color: #6c757d;
+        }
+        
+        .empty-state p {
+            margin-bottom: 10px;
+        }
+        
+        .empty-state .icon {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        
+        /* Loading Overlay */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+        
+        .loading-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 5px solid #e9ecef;
+            border-top-color: #1e3c72;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Result Footer */
+        .footer {
+            background: #f8f9fa;
+            padding: 20px 30px;
+            border-top: 2px solid #e9ecef;
+        }
+        
+        .result-banner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .result-badge {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            padding: 12px 24px;
+            border-radius: 50px;
+        }
+        
+        .result-badge.neutral {
+            background: #e9ecef;
+            color: #495057;
+            border: 2px solid #ced4da;
+        }
+        
+        .result-badge.vulnerable {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+        
+        .result-badge.secure {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+        
+        .header-info {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        
+        .header-item {
+            background: white;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            border: 1px solid #dee2e6;
+        }
+        
+        .url-display {
+            font-family: monospace;
+            background: #e9ecef;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-size: 0.9rem;
+            word-break: break-all;
+        }
+        
+        /* Analysis Details */
+        .analysis-details {
+            margin-top: 20px;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+        
+        .detail-item {
+            background: white;
+            border: 1px solid #dee2e6;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .detail-header {
+            background: #f8f9fa;
+            padding: 15px 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-weight: 600;
+        }
+        
+        .detail-header:hover {
+            background: #e9ecef;
+        }
+        
+        .detail-content {
+            padding: 20px;
+            border-top: 1px solid #dee2e6;
+        }
+        
+        .impact-list, .mitigation-list {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .impact-list li, .mitigation-list li {
+            padding: 10px 0;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .impact-list li:last-child, .mitigation-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .impact-list li::before {
+            content: "⚠️";
+        }
+        
+        .mitigation-list li::before {
+            content: "✅";
+        }
+        
+        .code-block {
+            background: #2d2d2d;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            margin: 15px 0;
+            overflow-x: auto;
+        }
+        
+        .example-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 15px 0;
+            border-left: 4px solid #17a2b8;
+        }
+        
+        /* Utility Classes */
+        .text-muted { color: #6c757d; }
+        .text-small { font-size: 0.85rem; }
+        .mt-2 { margin-top: 10px; }
+        .mb-2 { margin-bottom: 10px; }
+        .flex { display: flex; }
+        .items-center { align-items: center; }
+        .gap-2 { gap: 10px; }
+        
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .header { flex-direction: column; text-align: center; }
+            .input-flex { flex-direction: column; }
+            .btn { width: 100%; }
+            .iframe-container { height: 50vh; }
+            .result-banner { flex-direction: column; }
+            .header-info { justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>Clickjacking Test</h1>
+            <div class="badge">by andwisakti</div>
+        </div>
+        
+        <!-- Input Section -->
+        <div class="input-section">
+            <div class="input-group">
+                <label>
+                    <span>🌐 Masukkan URL Website yang Ingin Diuji</span>
+                    <span class="text-muted text-small">(gunakan format lengkap: https://example.com)</span>
+                </label>
+                
+                <div class="input-flex">
+                    <input 
+                        type="url" 
+                        id="urlInput" 
+                        placeholder="https://example.com" 
+                        value=""
+                    >
+                    <button class="btn btn-primary" onclick="testUrl()" id="testBtn">
+                        <span>🔄</span> Test Sekarang
+                    </button>
+                    <button class="btn btn-outline" onclick="resetInput()">
+                        <span>↺</span> Reset
+                    </button>
+                </div>
+                
+                <!-- Contoh URL Netral -->
+                <div class="url-examples">
+                    <span class="text-muted">Contoh:</span>
+                    <span class="url-example" onclick="setUrl('https://example.com')">📄 example.com</span>
+                    <span class="url-example" onclick="setUrl('https://google.com')">🔍 google.com</span>
+                    <span class="url-example" onclick="setUrl('https://facebook.com')">📘 facebook.com</span>
+                    <span class="url-example" onclick="setUrl('https://tokopedia.com')">🛒 tokopedia.com</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Info Bar -->
+        <div class="info-bar">
+            <div class="info-item">
+                <span>🛡️</span> XSS Protected
+            </div>
+            <div class="info-item">
+                <span>🔒</span> CSP Enabled
+            </div>
+            <div class="info-item warning">
+                <span>⚠️</span> Hasil adalah simulasi untuk demo
+            </div>
+        </div>
+        
+        <!-- Iframe Container - KOSONG -->
+        <div class="iframe-container" id="iframeContainer">
+            <div class="loading-overlay" id="loadingOverlay">
+                <div class="spinner"></div>
+            </div>
+            
+            <!-- Empty State -->
+            <div class="empty-state" id="emptyState">
+                <div class="icon">🔍</div>
+                <h3>Belum Ada Website Diuji</h3>
+                <p>Masukkan URL di atas dan klik "Test Sekarang" untuk memulai</p>
+                <p class="text-small text-muted">Contoh: https://example.com</p>
+            </div>
+            
+            <iframe 
+                id="testFrame"
+                src="about:blank" 
+                title="Clickjacking Test Frame"
+                sandbox="allow-same-origin allow-scripts allow-popups allow-forms allow-modals"
+                style="display: none;"
+            ></iframe>
+        </div>
+        
+        <!-- Result Footer -->
+        <div class="footer" id="resultFooter">
+            <div class="result-banner">
+                <div class="result-badge neutral" id="resultBadge">
+                    <span id="resultIcon">⚡</span>
+                    <span id="resultText">Belum ada pengujian</span>
+                </div>
+                <div class="header-info" id="headerInfo">
+                    <span class="header-item">X-Frame-Options: —</span>
+                    <span class="header-item">CSP: —</span>
+                </div>
+            </div>
+            
+            <div class="url-display" id="urlDisplay">
+                —
+            </div>
+            
+            <!-- Analysis Details (akan diisi oleh JavaScript) -->
+            <div class="analysis-details" id="analysisDetails"></div>
+        </div>
+    </div>
+    
+    <!-- Footer Note -->
+    <div style="max-width: 1400px; margin: 20px auto 0; padding: 0 20px; text-align: center; color: white;">
+        <p> Clickjacking Test </p>
+    </div>
+
+    <script>
+        // ==================== SECURITY FUNCTIONS ====================
+        function sanitizeInput(input) {
+            if (!input) return '';
+            const div = document.createElement('div');
+            div.textContent = input;
+            return div.innerHTML;
+        }
+
+        function validateUrl(url) {
+            if (!url) return false;
+            try {
+                const urlObj = new URL(url);
+                return urlObj.protocol === 'http:' || urlObj.protocol === 'https:';
+            } catch {
+                return false;
+            }
+        }
+
+        function getHostname(url) {
+            try {
+                return new URL(url).hostname.replace('www.', '');
+            } catch {
+                return url;
+            }
+        }
+
+        // ==================== SIMULASI CEK HEADERS ====================
+        async function checkHeaders(url) {
+            // Simulasi pengecekan header untuk demo
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    const hostname = getHostname(url);
+                    
+                    // Database simulasi netral
+                    const random = Math.random();
+                    
+                    if (hostname.includes('google') || hostname.includes('facebook') || 
+                        hostname.includes('tokopedia') || hostname.includes('github')) {
+                        // Situs terkenal biasanya aman
+                        resolve({
+                            xFrameOptions: 'DENY',
+                            csp: "frame-ancestors 'none'",
+                            loadable: false
+                        });
+                    } else if (hostname.includes('example') || hostname.includes('test')) {
+                        // Situs example/test biasanya rentan
+                        resolve({
+                            xFrameOptions: null,
+                            csp: null,
+                            loadable: true
+                        });
+                    } else {
+                        // Random untuk domain lain (50:50 untuk demo)
+                        if (random < 0.5) {
+                            resolve({
+                                xFrameOptions: 'SAMEORIGIN',
+                                csp: "frame-ancestors 'self'",
+                                loadable: false
+                            });
+                        } else {
+                            resolve({
+                                xFrameOptions: null,
+                                csp: null,
+                                loadable: true
+                            });
+                        }
+                    }
+                }, 1500);
+            });
+        }
+
+        // ==================== GENERATE ANALISIS ====================
+        function generateAnalysis(url, headers) {
+            const hostname = getHostname(url);
+            const isVulnerable = headers.loadable;
+            
+            if (isVulnerable) {
+                return `
+                    <div class="detail-item">
+                        <div class="detail-header" onclick="toggleDetail(this)">
+                            <span>📋 Deskripsi Kerentanan</span>
+                            <span>▼</span>
+                        </div>
+                        <div class="detail-content">
+                            <p><strong>Website:</strong> ${sanitizeInput(hostname)}</p>
+                            <p><strong>Status:</strong> <span style="color: #dc3545;">RENTAN TERHADAP CLICKJACKING</span></p>
+                            <p style="margin-top: 10px;">${sanitizeInput(hostname)} tidak mengirimkan header keamanan X-Frame-Options atau CSP frame-ancestors. Hal ini memungkinkan website untuk dimuat dalam iframe dari domain mana pun.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <div class="detail-header" onclick="toggleDetail(this)">
+                            <span>💥 Dampak Keamanan</span>
+                            <span>▼</span>
+                        </div>
+                        <div class="detail-content">
+                            <ul class="impact-list">
+                                <li>Pencurian kredensial login pengguna</li>
+                                <li>Pengambilalihan akun (account takeover)</li>
+                                <li>Eksekusi aksi tidak diinginkan (transfer, post, delete)</li>
+                                <li>Pencurian data sensitif pengguna</li>
+                                <li>Phishing dan social engineering</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <div class="detail-header" onclick="toggleDetail(this)">
+                            <span>🔍 Contoh Skenario Serangan</span>
+                            <span>▼</span>
+                        </div>
+                        <div class="detail-content">
+                            <div class="example-card">
+                                <strong>Contoh 1: Pencurian Login</strong>
+                                <p style="margin: 10px 0;">Penyerang membuat halaman palsu dengan iframe transparan ke halaman login asli.</p>
+                                <div class="code-block">
+&lt;iframe src="${sanitizeInput(url)}/login" style="opacity:0; position:absolute; width:100%; height:100%;"&gt;&lt;/iframe&gt;
+&lt;div style="position:absolute; top:200px; left:50px;"&gt;
+    &lt;h2&gt;Login untuk Melihat Konten&lt;/h2&gt;
+    &lt;input placeholder="Username"&gt;
+    &lt;input placeholder="Password"&gt;
+    &lt;button&gt;Login&lt;/button&gt;
+&lt;/div&gt;</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <div class="detail-header" onclick="toggleDetail(this)">
+                            <span>🛡️ Rekomendasi Mitigasi</span>
+                            <span>▼</span>
+                        </div>
+                        <div class="detail-content">
+                            <ul class="mitigation-list">
+                                <li>Tambahkan header HTTP: <code>X-Frame-Options: DENY</code></li>
+                                <li>Implementasikan Content-Security-Policy: <code>frame-ancestors 'none';</code></li>
+                                <li>Untuk kebutuhan tertentu, gunakan <code>X-Frame-Options: SAMEORIGIN</code></li>
+                                <li>Gunakan framebusting JavaScript sebagai backup</li>
+                            </ul>
+                            
+                            <p style="margin-top: 15px;"><strong>Contoh Konfigurasi:</strong></p>
+                            <div class="code-block">
+# Apache (.htaccess)
+Header always append X-Frame-Options DENY
+Header set Content-Security-Policy "frame-ancestors 'none';"
+
+# Nginx
+add_header X-Frame-Options "DENY" always;
+add_header Content-Security-Policy "frame-ancestors 'none';" always;</div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                return `
+                    <div class="detail-item">
+                        <div class="detail-header" onclick="toggleDetail(this)">
+                            <span>✅ Website Aman</span>
+                            <span>▼</span>
+                        </div>
+                        <div class="detail-content">
+                            <p><strong>Website:</strong> ${sanitizeInput(hostname)}</p>
+                            <p><strong>Status:</strong> <span style="color: #28a745;">AMAN DARI CLICKJACKING</span></p>
+                            <p style="margin-top: 10px;">Website ini memiliki proteksi clickjacking:</p>
+                            <ul style="margin-top: 10px; padding-left: 20px;">
+                                <li>${headers.xFrameOptions ? '✓ X-Frame-Options: ' + headers.xFrameOptions : '✓ Proteksi terdeteksi'}</li>
+                                <li>${headers.csp ? '✓ CSP: ' + headers.csp : '✓ Header keamanan aktif'}</li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // ==================== UPDATE UI ====================
+        function updateUI(headers, url) {
+            const hostname = getHostname(url);
+            const isVulnerable = headers.loadable;
+            
+            // Update badge
+            const badge = document.getElementById('resultBadge');
+            const icon = document.getElementById('resultIcon');
+            const text = document.getElementById('resultText');
+            
+            badge.className = 'result-badge ' + (isVulnerable ? 'vulnerable' : 'secure');
+            icon.innerHTML = isVulnerable ? '⚠️' : '✅';
+            text.innerHTML = isVulnerable 
+                ? `RENTAN - ${hostname} dapat dimuat dalam iframe` 
+                : `AMAN - ${hostname} terproteksi dari clickjacking`;
+            
+            // Update header info
+            document.getElementById('headerInfo').innerHTML = `
+                <span class="header-item">X-Frame-Options: ${headers.xFrameOptions || '❌ TIDAK ADA'}</span>
+                <span class="header-item">CSP: ${headers.csp ? '✅ ADA' : '❌ TIDAK ADA'}</span>
+            `;
+            
+            // Update URL display
+            document.getElementById('urlDisplay').textContent = url;
+            
+            // Generate analysis
+            document.getElementById('analysisDetails').innerHTML = generateAnalysis(url, headers);
+        }
+
+        // ==================== MAIN FUNCTIONS ====================
+        async function testUrl() {
+            const input = document.getElementById('urlInput');
+            const rawUrl = input.value.trim();
+            
+            if (!rawUrl) {
+                alert('Masukkan URL terlebih dahulu!');
+                return;
+            }
+            
+            if (!validateUrl(rawUrl)) {
+                input.classList.add('error');
+                alert('URL tidak valid! Gunakan format: https://example.com');
+                setTimeout(() => input.classList.remove('error'), 3000);
+                return;
+            }
+            
+            input.classList.remove('error');
+            
+            // Sembunyikan empty state, tampilkan iframe
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('testFrame').style.display = 'block';
+            
+            // Show loading
+            document.getElementById('loadingOverlay').classList.add('active');
+            document.getElementById('testBtn').disabled = true;
+            document.getElementById('testBtn').innerHTML = '<span>⏳</span> Menguji...';
+            
+            // Update iframe
+            document.getElementById('testFrame').src = rawUrl;
+            
+            // Simulasi pengecekan headers
+            try {
+                const headers = await checkHeaders(rawUrl);
+                updateUI(headers, rawUrl);
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Gagal melakukan test. Silakan coba lagi.');
+            } finally {
+                setTimeout(() => {
+                    document.getElementById('loadingOverlay').classList.remove('active');
+                    document.getElementById('testBtn').disabled = false;
+                    document.getElementById('testBtn').innerHTML = '<span>🔄</span> Test Sekarang';
+                }, 500);
+            }
+        }
+
+        function resetInput() {
+            // Reset ke keadaan awal
+            document.getElementById('urlInput').value = '';
+            document.getElementById('testFrame').src = 'about:blank';
+            document.getElementById('testFrame').style.display = 'none';
+            document.getElementById('emptyState').style.display = 'block';
+            
+            // Reset badge
+            document.getElementById('resultBadge').className = 'result-badge neutral';
+            document.getElementById('resultIcon').innerHTML = '⚡';
+            document.getElementById('resultText').innerHTML = 'Belum ada pengujian';
+            
+            // Reset header info
+            document.getElementById('headerInfo').innerHTML = `
+                <span class="header-item">X-Frame-Options: —</span>
+                <span class="header-item">CSP: —</span>
+            `;
+            
+            // Reset URL display
+            document.getElementById('urlDisplay').textContent = '—';
+            
+            // Kosongkan analysis
+            document.getElementById('analysisDetails').innerHTML = '';
+        }
+
+        function setUrl(url) {
+            document.getElementById('urlInput').value = url;
+            testUrl();
+        }
+
+        function toggleDetail(header) {
+            const content = header.nextElementSibling;
+            const arrow = header.querySelector('span:last-child');
+            
+            if (content.style.display === 'none' || !content.style.display) {
+                content.style.display = 'block';
+                arrow.textContent = '▼';
+            } else {
+                content.style.display = 'none';
+                arrow.textContent = '▶';
+            }
+        }
+
+        // Enter key
+        document.getElementById('urlInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') testUrl();
+        });
+    </script>
+</body>
+</html>
